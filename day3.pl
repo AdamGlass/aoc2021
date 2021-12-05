@@ -68,12 +68,59 @@ day3_p1(File, V):-
     compute_gamma_epsilon(Diag, Gamma, Epsilon),
     V is Gamma * Epsilon.
 
+bitsplit(Bit, L):-
+    nth0(Bit, L, 0).
+
+partition_bit(Diag, Bit, Zeros, Ones):-
+    partition(bitsplit(Bit), Diag, Zeros, Ones).
+
+most_common_oxy([X], _, X).
+most_common_oxy(Diag, Bit,  V):-
+    partition_bit(Diag, Bit, Zeros, Ones),
+    length(Zeros, LZeros), length(Ones,LOnes),
+    NewBit is Bit + 1,
+    ( LZeros > LOnes ->
+        most_common_oxy(Zeros, NewBit, V)
+    ;
+        most_common_oxy(Ones, NewBit, V)
+    ).
+
+most_common_co2([X], _, X).
+most_common_co2(Diag, Bit,  V):-
+    partition_bit(Diag, Bit, Zeros, Ones),
+    length(Zeros, LZeros), length(Ones,LOnes),
+    NewBit is Bit + 1,
+    ( LZeros =< LOnes->
+        most_common_co2(Zeros, NewBit, V)
+    ;
+        most_common_co2(Ones, NewBit, V)
+    ).
+
+compute_oxygen(Diag, V):-
+    most_common_oxy(Diag, 0, V).
+
+compute_co2(Diag, V):-
+    most_common_co2(Diag, 0, V).
+
+day3_p2(File, V):-
+    phrase_from_file(binary_strings(Diag), File),
+    compute_oxygen(Diag, OL), compute_co2(Diag, CL),
+    binary_to_dec(OL, O), binary_to_dec(CL, C), V is O*C.
+
 day3_p1_test(V):-
     day3_p1("data/day3_p1_test", V).
 
 day3_p1(V):-
     day3_p1("data/day3_p1_data", V).
 
+day3_p2_test(V):-
+    day3_p2("data/day3_p1_test", V).
+
+day3_p2(V):-
+    day3_p2("data/day3_p1_data", V).
+
 day3:-
     day3_p1_test(198),
-    day3_p1(693486).
+    day3_p1(693486),
+    day3_p2_test(230),
+    day3_p2(3379326).
