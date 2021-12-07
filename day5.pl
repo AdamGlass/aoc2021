@@ -1,5 +1,6 @@
 :- use_module(library(dcg/basics)).
 :- use_module(library(lists)).
+:- use_module(library(clpfd)).
 
 lines([]) --> eos.
 lines([L]) --> line(L).
@@ -23,6 +24,24 @@ lseg_cross(lseg(X1, Y1, X1, Y2), X1, Y):-
     between_no_order(Y1, Y2, Y).
 lseg_cross(lseg(X1, Y1, X2, Y1), X, Y1):-
     between_no_order(X1, X2, X).
+% reverse line
+lseg_cross(lseg(X1, Y1, X2, Y2), X, Y):-
+    X1 > X2,
+    lseg_cross(lseg(X2, Y2, X1, Y1), X, Y).
+lseg_cross(A, X, Y):-
+    lseg_cross_diag(A, X, Y).
+
+lseg_cross_diag(lseg(X1, Y1, X2, Y2), X, Y):-
+    X1 =< X2,
+    between_no_order(X1, X2, X),
+    between_no_order(Y1, Y2, Y),
+    (Y1 < Y2 ->
+         X #= X1 + R,
+         Y #= Y1 + R
+    ;
+         X #= X1 + R,
+         Y #= Y1 - R
+    ).
 
 crosses([], _, _, AccCount, AccCount).
 crosses([L|Ls], X, Y, AccCount, Count):-
@@ -34,10 +53,6 @@ crosses([_|Ls], X, Y, AccCount, Count):-
 
 crosses(L, [X,Y], Count):-
     crosses(L, X, Y, 0, Count).
-
-%cross2(L, MaxX, MaxY):-
-%    crosses(L, X, Y, 0, 2), writeln('crosses done'),
-%    writeln('cross2').
 
 count_crosses(L, MaxX, MaxY, CrossCount):-
     O = [X,Y],
@@ -55,7 +70,7 @@ non_diag(lseg(_, Y, _, Y)).
 day5_p1(File, Score):-
     phrase_from_file(lines(AllLines), File),
     include(non_diag,AllLines, Lines),
-    length(AllLines, AL), length(Lines, LL), writeln(AL), writeln(LL),
+    length(AllLines, AL), length(Lines, LL),
     max_coords(Lines, 0, 0, MaxX, MaxY),
     count_crosses(Lines, MaxX, MaxY, CrossCount),
     Score = CrossCount.
@@ -78,5 +93,8 @@ day5_p2(V):-
 day5_p2_test(V):-
     day5_p2("data/day5_p1_test", V).
 
-day5.
-
+day5:-
+    day5_p1_test(5),
+    day5_p1(7473),
+    day5_p2_test(12),
+    day5_p2(24164).
