@@ -112,3 +112,6 @@ day8:-
     day8_p1(488),
     day8_p2_test(61229),
     day8_p2(1040429).
+
+day_profile:-
+    profile(day8).

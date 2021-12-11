@@ -105,3 +105,5 @@ day10:-
     day10_p2_test(288957),
     day10_p2(2924734236).
 
+day10_profile:-
+    profile(day10).

@@ -138,3 +138,5 @@ day9:-
     day9_p2_test(1134),
     day9_p2(1148965).
 
+day9_profile:-
+    profile(day9).
