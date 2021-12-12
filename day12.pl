@@ -94,18 +94,13 @@ day12_p2(File, Score):-
              SmallCave = cave(Name, small)),
             SmallCavesList),
     list_to_set(SmallCavesList, SmallCavesSet),
-    writeln(SmallCavesSet),
     findall(Paths,
             (member(DoubleSmallCave, SmallCavesSet),
              day12_common(CaveNetwork, Paths, p2_visit(DoubleSmallCave))),
             TotalPaths),
-    forall(member(P, TotalPaths),
-           day12_path_report(P)),
-    findall(Count,
-            (member(P, TotalPaths),
-             length(P, Count)),
-            PathCounts),
-    writeln(PathCounts).
+    foldl(append, TotalPaths, [], FlattenedPaths),
+    sort(FlattenedPaths, SortedPaths),
+    length(SortedPaths, Score).
 
 day12_p1(Score):-
     day12_p1("data/day12_p1_data", Score).
@@ -132,8 +127,12 @@ day12_p2_test3(Score):-
     day12_p2("data/day12_p1_test3", Score).
 
 day12:-
-    day12_p1_test(_),
-    day12_p1(_),
-    day12_p2_test(_),
-    day12_p2(_).
+    day12_p1_test(10),
+    day12_p1_test2(19),
+    day12_p1_test3(226),
+    day12_p1(3887),
+    day12_p2_test(36),
+    day12_p2_test2(103),
+    day12_p2_test3(3509),
+    day12_p2(104834).
 
