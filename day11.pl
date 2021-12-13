@@ -1,6 +1,7 @@
 :- use_module(library(dcg/basics)).
 :- use_module(library(tabling)).
 :- use_module(library(clpfd)).
+:- use_module(library(assoc)).
 
 matrixp(M) --> mapx(M).
 
@@ -19,9 +20,38 @@ mdigit(V) --> [C], {char_type(C, digit), char_code('0', Zero), V is C - Zero}.
 % energy around increases by 1
 % energy level flashes
 
-matrix(Matrix, I, J, Value) :-
-    nth0(I, Matrix, Row),
-    nth0(J, Row, Value).
+% easier to parse but clumsy to modify
+lmatrix(Matrix, X, Y, Value) :-
+    nth0(Y, Matrix, Row),
+    nth0(X, Row, Value).
+
+lmatrix_amatrix(ListMatrix, AssocMatrix):-
+    length(ListMatrix, RowCount),
+    [Row|_] = ListMatrix,
+    length(Row, ColumnCount),
+    LY is RowCount - 1,
+    LX is ColumnCount - 1,
+    findall(X+Y-Value,
+	    (between(0, LX, X),
+	     between(0, LY, Y),
+	     lmatrix(ListMatrix, X, Y, Value)
+	    ),
+	    KeyValueList),
+    append([xmax-LX, ymax-LY], KeyValueList, MatrixInit),
+    ord_list_to_assoc(MatrixInit, AssocMatrix).
+
+amatrix(Matrix, X, Y, Value) :-
+    get_assoc(X+Y, Matrix, Value).
+
+amatrix_limits(Matrix, XMAX, YMAX):-
+    get_assoc(xmax, Matrix, XMAX),
+    get_assoc(ymax, Matrix, YMAX).
+
+matrix(Matrix, X, Y, Value):-
+    amatrix(Matrix, X, Y, Value).
+
+matrix_limits(Matrix, XMAX, YMAX):-
+    amatrix_limits(Matrix, XMAX, YMAX).
 
 matrix_ones(M):-
     L = 10,
@@ -36,7 +66,6 @@ matrix_zeros(M):-
     length(Columns, L),
     maplist(=(0), Columns),
     maplist(=(Columns), M).
-
 
 matrix_add(M1, M2, M3):-
     maplist(maplist(plus), M1, M2, M3).
@@ -137,9 +166,20 @@ octo_flash_accounting(FlashedOctopi, Count, PostFlash):-
     length(Flashed, Count),
     octo_deflash(FlashedOctopi, PostFlash).
 
-octo_write(Octopi):-
-    forall(member(X, Octopi),
-           writeln(X)).
+octo_value_char(N, V):-
+    N < 16,
+    nth0(N, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'A', 'B', 'C', 'D','E', 'F'], V).
+octo_value_char(N, 'X'):-
+    N > 15.
+
+octo_write(OctoMatrix):-
+    matrix_limits(OctoMatrix, XMAX, YMAX),
+    forall(between(0, YMAX, Y),
+	   (forall(between(0, XMAX, X),
+		   (matrix(OctoMatrix, X, Y, Value),
+		    octo_value_char(Value,Display),
+		    write(Display))),
+	    writeln(""))).
 
 oct_steps_(_, 0, Flashes, Flashes).
 oct_steps_(Octopi, Steps, AccFlashes, Flashes):-
@@ -157,9 +197,13 @@ oct_steps(Octopi, Steps, Flashes):-
     oct_steps_(Octopi, Steps, 0, Flashes).
 
 day11_p1(File, Steps, Flashes):-
-    phrase_from_file(matrixp(M), File),
-    octo_write(M),
-    oct_steps(M, Steps, Flashes).
+    phrase_from_file(matrixp(ListMatrix), File),
+    lmatrix_amatrix(ListMatrix, Matrix),
+    octo_write(Matrix),
+    writeln(Matrix).
+    
+%    octo_write(M),
+%    oct_steps(M, Steps, Flashes).
 
 day11_p1(Score):-
     day11_p1("data/day11_p1_data", 100, Score).
