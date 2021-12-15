@@ -10,7 +10,9 @@
 		   matrix_xy_adjacent_cardinal/4,
 		   matrix_xy/3,
 		   matrix_write/2,
-		   matrix_foldl/4]).
+		   matrix_foldl/4,
+		   matrix_init/1,
+		  ]).
 		   
 % easier to parse but clumsy to modify
 lmatrix(Matrix, X, Y, Value) :-
@@ -108,3 +110,5 @@ matrix_write(Matrix, ElementFormatter):-
 matrix_foldl(Op, List, InitialMatrix, OutMatrix):-
     foldl(Op, List, InitialMatrix, OutMatrix).
 	      
+matrix_init(InitMatrix):-
+    empty_assoc(InitMatrix).
