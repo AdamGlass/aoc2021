@@ -74,156 +74,102 @@ matrix_xy_transform_(Op, Matrix, X, Y, NewMatrix):-
 matrix_xy_add(Matrix, X, Y, Addend, NewMatrix):-
     matrix_xy_transform_(plus(Addend), Matrix, X, Y, NewMatrix).
 
-dmatrix_ones(M):-
-    L = 10,
-    length(M, L),
-    length(Columns, L),
-    maplist(=(1), Columns),
-    maplist(=(Columns), M).
+matrix_xy_adjacent_all(DX, DY):-
+    member(dir(DX, DY), [dir(-1, -1), dir(0, -1), dir(1,-1),
+                         dir(-1, 0), dir(1, 0),
+                         dir(-1, 1), dir(0, 1), dir(1,1)]).
 
-dmatrix_zeros(M):-
-    L = 10,
-    length(M, L),
-    length(Columns, L),
-    maplist(=(0), Columns),
-    maplist(=(Columns), M).
+matrix_xy_adjacent_cardinal(DX, DY):-
+    member(dir(DX, DY), [dir(0, -1), dir(0, 1),
+                         dir(-1, 0), dir(1, 0)]).
 
-dmatrix_add(M1, M2, M3):-
-    maplist(maplist(plus), M1, M2, M3).
+matrix_xy_adjacent_all(Matrix, X, Y, AdjacentList):-
+    findall(NX+NY,
+	    (matrix_xy_adjacent_all(DX, DY),
+             NX is X + DX,
+             NY is Y + DY,
+             matrix(Matrix, NX, NY, _)),
+	    AdjacentList).
 
-dmatrix_inf_xy(M, X, Y, NV):-
-    matrix(M, X, Y, Value),
-    Value < 10,
-    findall(1, (
-                between(-1, 1, DX),
-                between(-1, 1, DY),
-                DX \= 0,
-                DY \= 0,
-                NX is X + DX,
-                NY is Y + DY,
-                matrix(M, NX, NY, V),
-                V = 10
-            ),
-            NeighborFlash),
-    length(NeighborFlash, Flashes),
-    (Flashes > 0 ->
-         NV = Flashes,
-         write(["UP", X,Y, NV])
-    ;
-         NV = 0,
-         write(["UP0", X,Y, NV])
-    ).
+matrix_xy_adjacent_cardinal(Matrix, X, Y, AdjacentList):-
+    findall(NX+NY,
+	    (matrix_xy_adjacent_cardinal(DX, DY),
+             NX is X + DX,
+             NY is Y + DY,
+             matrix(Matrix, NX, NY, _)),
+	    AdjacentList).
 
-dmatrix_inf_xy(M, X, Y, 1):-
-    matrix(M, X, Y, 10).
+matrix_xy(Matrix, X, Y):-
+    matrix_limits(Matrix, XMAX, YMAX),
+    between(0, XMAX, X),
+    between(0, YMAX, Y).
 
-dmatrix_inf_xy(M, X, Y, 0):-
-    matrix(M, X, Y, 11).
+matrix_write(Matrix, ElementFormatter):-
+    matrix_limits(OctoMatrix, XMAX, YMAX),
+    forall(between(0, YMAX, Y),
+	   (forall(between(0, XMAX, X),
+		   (matrix(OctoMatrix, X, Y, Value),
+		    call(ElementFormatter,Value,Display),
+		    write(Display))),
+	    writeln(""))).
 
-dmatrix_same_size(M, S):-
-    same_length(M, S),
-    transpose(M, TM),
-    transpose(S, TS),
-    same_length(TM, TS).
-
-
-dflashed_done(10, 1).
-dflashed_done(X, X).
-
-doct_flash_(M, Y, AccMatrix, IM):-
-    length(M, RowCount),
-    RowCount > Y,
-    length(Row, RowCount),
-    LX is RowCount - 1,
-    findall(V,
-            (between(0, LX, X),
-             matrix_inf_xy(M, X, Y, V)),
-            Row),
-    reverse(Row, NewRow),
-    NewY is Y + 1,
-    oct_flash_(M, NewY, [NewRow|AccMatrix], IM).
-
-doct_flash_(M, _, AccM, IM):-
-    same_length(M, AccM),
-    reverse(AccM, IM).
-
-doct_flash(M, IM):-
-    writeln("flash"),
-    oct_write(M),
-    oct_flash_(M, 0, [], AM),
-    writeln("adder"),
-    oct_write(AM),
-    matrix_zeros(Zeros),
-    (AM \= Zeros ->
-         matrix_add(M, AM, NewM),
-         oct_flash(NewM, AM)
-    ;
-         M = IM
-    ).
-
-oct_deflash_row([], []).
-oct_deflash_row([R|Rs], [N|Ns]):-
-    R >= 10,
-    N = 0,
-    oct_deflash_row(Rs, Ns).
-
-oct_deflash_row([R|Rs], [N|Ns]):-
-    R < 10,
-    N = R,
-    oct_deflash_row(Rs, Ns).
-
-oct_deflash(FlashedOctopi, PostFlash):-
-    maplist(oct_deflash_row, FlashedOctopi, PostFlash).
-
-oct_flash_accounting(FlashedOctopi, Count, PostFlash):-
-    length(FlashedOctopi, RowCount),
-    LX is RowCount - 1,
-    findall(1,
-            (between(0, LX, X),
-             between(0, LX, Y),
-             matrix(FlashedOctopi, X, Y, V),
-             V > 10),
-            Flashed),
-    length(Flashed, Count),
-    oct_deflash(FlashedOctopi, PostFlash).
-
-oct_flash_octopi_(X+Y, Octopi, FlashedOctopi):-
-    matrix_xy_add(Octopi, X, Y, 1, FlashedOctopi).
+matrix_foldl(Op, List, InitialMatrix, OutMatrix):-
+    foldl(Op, List, InitialMatrix, OutMatrix).
 
 oct_flash_octopi_(X+Y, Octopi, FlashedOctopi):-
     matrix(Octopi, X, Y, Value),
+    NewValue is Value + 1,
+    ValueCeiling is min(NewValue, 10),
+    matrix_transform(Octopi, X, Y, ValueCeiling, FlashedOctopi).
 
-    matrix_transform(Octopi, X, Y, 
-    matrix_xy_add(Octopi, X, Y, 1, FlashedOctopi).
+oct_flash_octopi_done(Octopi, X+Y, DoneOctopi):-
+    matrix_transform(Octopi, X, Y, 11, DoneOctopi).
 
-oct_flash_octopi(flash(X,Y), Octopi, FlashedOctopi):-
+oct_flash_dir(DX, DY):-
+    member(dir(DX, DY), [dir(-1, -1), dir(0, -1), dir(1,-1),
+                         dir(-1, 0), dir(1, 0),
+                         dir(-1, 1), dir(0, 1), dir(1,1)]).
+
+oct_flash_octopi(flash(X,Y), Octopi, FlashDoneOctopi):-
     findall(NX+NY,
-	    (between(-1, 1, DX),
-             between(-1, 1, DY),
+	    (oct_flash_dir(DX, DY),
              NX is X + DX,
              NY is Y + DY,
-             matrix(Octopi, NX, NY, _)
-            ),
+             matrix(Octopi, NX, NY, _)),
 	    EnergyAddList),
-    foldl(oct_flash_octopi_, EnergyAddList, Octopi, FlashedOctopi).
+    foldl(oct_flash_octopi_, EnergyAddList, Octopi, FlashedOctopi),
+    writeln("before done"),
+    oct_flash_octopi_done(FlashedOctopi, X+Y, FlashDoneOctopi),
+    writeln("after done").
 
 oct_flash_(Octopi, FlashingOctopi, PostflashOctopi):-
     foldl(oct_flash_octopi, FlashingOctopi, Octopi, PostflashOctopi).
 
-oct_flash(Octopi, FlashedOctopi):-
+oct_flash_flashing(Octopi, flash(X,Y)):-
     matrix_limits(Octopi, XMAX, YMAX),
-    writeln("before find"),
-    findall(flash(X,Y),
-	    (between(0, XMAX, X),
-	     between(0, YMAX, Y),
-	     matrix(Octopi, X, Y, 10)),
-	    FlashingOctopi),
-    writeln("after find"),
-    writeln(['flashing', FlashingOctopi]),
-    FlashingOctopi \= [],
-    oct_flash_(Octopi, FlashingOctopi, StepFlashedOctopi),
-    oct_flash(StepFlashedOctopi, FlashedOctopi).
-oct_flash(Octopi, Octopi).
+    between(0, XMAX, X),
+    between(0, YMAX, Y),
+    matrix(Octopi, X, Y, 10).
+
+oct_flash(Octopi, FlashedOctopi):-
+    writeln(['startflash']),
+    oct_write(Octopi),
+    findall(F,
+            oct_flash_flashing(Octopi, F),
+            Flashers),
+    length(Flashers, Count),
+    writeln(Flashers),
+    (Count > 0 ->
+         [NewF|F] = Flashers,
+         FlashingOctopi = [NewF],
+         oct_flash_(Octopi, FlashingOctopi, StepFlashedOctopi),
+         writeln(['flashed', FlashingOctopi]),
+         oct_write(StepFlashedOctopi),
+         oct_flash(StepFlashedOctopi, FlashedOctopi)
+    ;
+         writeln("DONE"),
+         FlashedOctopi = Octopi
+    ).
 
 oct_rollover_octopi(rollover(X,Y), Octopi, AfterOctopi):-
     matrix_transform(Octopi, X, Y, 0, AfterOctopi).
@@ -278,15 +224,6 @@ oct_steps_(Octopi, Steps, AccFlashes, Flashes):-
     NewFlashes is AccFlashes + FlashedCount,
     oct_steps_(NextStepOctopi, NewSteps, NewFlashes, Flashes).
 
-oct_not_yet:-
-    halt,
-    oct_flash(EOctopi, FlashedOctopi),
-    oct_flash_accounting(FlashedOctopi, FlashCount, PostFlash),
-    NewFlashes is FlashCount + AccFlashes,
-    NewSteps is Steps - 1,
-    oct_write(PostFlash),
-    oct_steps_(PostFlash, NewSteps, NewFlashes, Flashes).
-
 oct_steps(Octopi, Steps, Flashes):-
     oct_steps_(Octopi, Steps, 0, Flashes).
 
@@ -303,7 +240,7 @@ day11_p1_test(Score):-
     day11_p1("data/day11_p1_test", 2, Score).
 
 day11_p1_test2(Score):-
-    day11_p1("data/day11_p1_test2", 2, Score).
+    day11_p1("data/day11_p1_test2", 1, Score).
 
 day11_p2(Score):-
     day11_p2("data/day11_p1_data", Score).
