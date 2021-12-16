@@ -1,5 +1,6 @@
 :- module(matrix, [lmatrix/4,
 		   lmatrix_matrix/2,
+		   lmatrix_limits/3,
 		   matrix/4,
 		   matrix_limits/3,
 		   matrix_element_transform/3,
@@ -9,9 +10,10 @@
 		   matrix_xy_adjacent_all/4,
 		   matrix_xy_adjacent_cardinal/4,
 		   matrix_xy/3,
+		   matrix_xy_adjacent_all/2,
 		   matrix_write/2,
 		   matrix_foldl/4,
-		   matrix_init/1,
+		   matrix_init/1
 		  ]).
 		   
 % easier to parse but clumsy to modify
@@ -32,6 +34,13 @@ lmatrix_matrix(ListMatrix, AssocMatrix):-
 	    ),
 	    KeyValueList),
     ord_list_to_assoc(KeyValueList, AssocMatrix).
+
+lmatrix_limits(ListMatrix, XMax, YMax):-
+    length(ListMatrix, Rows),
+    YMax is Rows - 1,
+    nth0(0, ListMatrix, Row),
+    length(Row, Columns),
+    XMax is Columns - 1.
 
 matrix(Matrix, X, Y, Value) :-
     get_assoc(X+Y, Matrix, Value).
