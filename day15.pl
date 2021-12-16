@@ -125,15 +125,13 @@ astar_guess_cost(gstate(Costs,Heap), X+Y, Cost, NewGuessCosts):-
     NewGuessCosts = gstate(NewCosts, NewHeap).
 
 astar_best_guess(gstate(GuessCosts, Heap), Open, NewOpen, NewGuessCosts, Min):-
-    assoc_to_list(Heap, HeapList),
-    writeln([guesses, HeapList, Open]),
+%    assoc_to_list(Heap, HeapList),
+%    writeln([guesses, HeapList, Open]),
     del_min_assoc(Heap, _-X+Y,_, NewHeap),
     NewGuessCosts = gstate(GuessCosts, NewHeap),
     Min = X+Y,
-    writeln("exists a guess"),
-    writeln("found someting"),
-    remove(Min, Open, NewOpen),
-    writeln(["buestguess?", Min, NewOpen]).
+    remove(Min, Open, NewOpen).
+%    writeln(["buestguess?", Min, NewOpen]).
 
 astar_heuristic(_, _, 0).
 astar_heuristic(X+Y, GX+GY, Guestimate):-
@@ -151,17 +149,17 @@ astar_update_neighbor(Goal,CostMatrix, CurrentCost, Neighbor,
 		      nstate(GuessCosts, KnownCosts, Open),
 		      nstate(NewGuessCosts, NewKnownCosts, NewOpen)):-
 
-    writeln(["neighborupdate", Neighbor]),
+%    writeln(["neighborupdate", Neighbor]),
     Neighbor = X+Y,
     astar_cost(CostMatrix, Neighbor, NeighborCost),
     TentativeCost is CurrentCost + NeighborCost,
     astar_known_cost(KnownCosts, X+Y, KnownCost),
-    writeln(["newknown", TentativeCost, KnownCost]),
+%    writeln(["newknown", TentativeCost, KnownCost]),
     (TentativeCost < KnownCost ->
 	 astar_known_cost(KnownCosts, X+Y, TentativeCost, NewKnownCosts),
 	 astar_heuristic(X+Y, Goal, HCost),
 	 NewGuessCost is TentativeCost + HCost,
-	 writeln(["newguesscost", HCost, NewGuessCost]),
+%	 writeln(["newguesscost", HCost, NewGuessCost]),
 	 astar_guess_cost(GuessCosts, X+Y, NewGuessCost, NewGuessCosts),
 	 (\+ member(X+Y, Open) ->
 	      NewOpen = [X+Y|Open]
@@ -169,7 +167,7 @@ astar_update_neighbor(Goal,CostMatrix, CurrentCost, Neighbor,
               NewOpen = Open
 	 )
     ;
-         writeln("no update"),
+%         writeln("no update"),
 	 nstate(GuessCosts, KnownCosts, Open) = 
 	 nstate(NewGuessCosts, NewKnownCosts, NewOpen)
     ).
@@ -179,28 +177,30 @@ astar_update_neighbor(_, _, Neighbor, In, In):-
 
 astar_(0, _, 0).
 astar_(Steps, astate(CostMatrix, Open, KnownCosts, Goal, GuessCosts), Cost):-
-    assoc_to_list(KnownCosts, KnownCostList),
-    writeln(["0astart", KnownCostList, Open]),
+%    assoc_to_list(KnownCosts, KnownCostList),
+%    writeln(["0astart", KnownCostList, Open]),
     NewSteps is Steps - 1,
-    writeln("1best guess"),
+    garbage_collect.
+    writeln(NewSteps),
+%    writeln("1best guess"),
     astar_best_guess(GuessCosts, Open, NewOpen, NewGuessCosts, Current),
-    writeln("1.5best guess"),
+%    writeln("1.5best guess"),
     astar_known_cost(KnownCosts, Current, CurrentCost),
-    writeln("1.6known"),
+%    writeln("1.6known"),
     (Current \= Goal ->
-	 writeln("2neighbors"),
+%	 writeln("2neighbors"),
 	 astar_neighbors(CostMatrix, Current, Neighbors),
-	 writeln("3fold"),
+%	 writeln("3fold"),
 	 foldl(astar_update_neighbor(Goal, CostMatrix, CurrentCost),
 	       Neighbors,
 	       nstate(NewGuessCosts, KnownCosts, NewOpen),
 	       nstate(NewNewGuessCosts, NewKnownCosts, NewNewOpen)),
-	 writeln("4recurse"),
+%	 writeln("4recurse"),
 	 astar_(NewSteps, astate(CostMatrix, NewNewOpen, NewKnownCosts, Goal, NewNewGuessCosts), Cost)
     ;
-         writeln("5failendpath"),
-	 writeln(KnownCosts),
-	 writeln(GuessCosts),
+%         writeln("5failendpath"),
+%	 writeln(KnownCosts),
+%	 writeln(GuessCosts),
 	 astar_known_cost(KnownCosts, Goal, Cost)
     ).
 %astar_(_, astar(_, Open, KnownCosts, Goal, GuessCosts), Cost):-
@@ -226,11 +226,54 @@ astar(CostMatrix, Cost):-
     astar_goal(CostMatrix,Goal),
     astar_bootstrap(Start, Goal, KnownCosts, GuessCosts),
 
-    astar_(20000, astate(CostMatrix, [Start], KnownCosts, Goal, GuessCosts), Cost).
+    astar_(40000, astate(CostMatrix, [Start], KnownCosts, Goal, GuessCosts), Cost).
 
 day15_p1_fast(File, Score):-
     phrase_from_file(matrixp(LCostMatrix), File),
     lmatrix_matrix(LCostMatrix, CostMatrix),
+    astar(CostMatrix, Score).
+
+% wrong description
+add_mod_(Addend, Old, NewValue):-
+    Value is Addend + Old,
+    (Value =< 9 ->
+	 NewValue = Value
+	 ;
+	 NewValue = 1
+    ).
+
+lmatrix_add_row(Value, Row, NewRow):-
+    maplist(add_mod_(Value), Row, NewRow).
+
+lmatrix_add(Matrix, Value, NewMatrix):-
+    maplist(lmatrix_add_row(Value), Matrix, NewMatrix).
+
+lmatrix_append(Matrix, A, NewMatrix):-
+    maplist(append, Matrix, A, NewMatrix).
+
+tile_right_(_, InMatrix+WorkingMatrix, Next):-
+    lmatrix_add(InMatrix, 1, NewInMatrix),
+    lmatrix_append(WorkingMatrix, NewInMatrix, NewWorkingMatrix),
+    Next = NewInMatrix+NewWorkingMatrix.
+
+tile_right(M, NewM):-
+    foldl(tile_right_, [1, 2, 3, 4], M+M, _+NewM).
+
+tile_down_(_, InMatrix+WorkingMatrix, Next):-
+    lmatrix_add(InMatrix, 1, NewInMatrix),
+    append(WorkingMatrix, NewInMatrix, NewWorkingMatrix),
+    Next = NewInMatrix+NewWorkingMatrix.
+
+tile_down(M, NewM):-
+    foldl(tile_down_, [1, 2, 3, 4], M+M, _+NewM).
+
+matrix_formatter(X,X).
+
+day15_p2_fast(File, Score):-
+    phrase_from_file(matrixp(LCostMatrix), File),
+    tile_right(LCostMatrix, TiledRight),
+    tile_down(TiledRight, LTiledMatrix),
+    lmatrix_matrix(LTiledMatrix, CostMatrix),
     astar(CostMatrix, Score).
 
 day15_p1(Score):-
@@ -238,6 +281,12 @@ day15_p1(Score):-
 
 day15_p1_test(Score):-
     day15_p1_fast("data/day15_p1_test", Score).
+
+day15_p2(Score):-
+    day15_p2_fast("data/day15_p1_data", Score).
+
+day15_p2_test(Score):-
+    day15_p2_fast("data/day15_p1_test", Score).
 
 day15_p1_test2_slow(Score):-
     day15_p1_slow("data/day15_p1_test2", Score).
