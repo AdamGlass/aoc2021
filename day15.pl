@@ -180,7 +180,6 @@ astar_(Steps, astate(CostMatrix, Open, KnownCosts, Goal, GuessCosts), Cost):-
 %    assoc_to_list(KnownCosts, KnownCostList),
 %    writeln(["0astart", KnownCostList, Open]),
     NewSteps is Steps - 1,
-    garbage_collect.
     writeln(NewSteps),
 %    writeln("1best guess"),
     astar_best_guess(GuessCosts, Open, NewOpen, NewGuessCosts, Current),
