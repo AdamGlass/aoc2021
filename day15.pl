@@ -2,7 +2,7 @@
 :- use_module(library(tabling)).
 :- use_module(library(clpfd)).
 :- use_module(library(assoc)).
-:- use_module(library(persistency)).
+:- use_module(matrix).
 :- dynamic cost/2.
 
 matrixp(M) --> mapx(M).
@@ -16,59 +16,6 @@ mdigits([D]) --> mdigit(D).
 mdigits([D|Ds]) --> mdigit(D), mdigits(Ds).
 
 mdigit(V) --> [C], {char_type(C, digit), char_code('0', Zero), V is C - Zero}.
-
-lmatrix(Matrix, X, Y, Value) :-
-    nth0(Y, Matrix, Row),
-    nth0(X, Row, Value).
-
-lmatrix_matrix(ListMatrix, AssocMatrix):-
-    length(ListMatrix, RowCount),
-    [Row|_] = ListMatrix,
-    length(Row, ColumnCount),
-    LY is RowCount - 1,
-    LX is ColumnCount - 1,
-    findall(X+Y-Value,
-	    (between(0, LX, X),
-	     between(0, LY, Y),
-	     lmatrix(ListMatrix, X, Y, Value)
-	    ),
-	    KeyValueList),
-    ord_list_to_assoc(KeyValueList, AssocMatrix).
-
-matrix(Matrix, X, Y, Value) :-
-    get_assoc(X+Y, Matrix, Value).
-
-max_xykey([], AccX, AccY, AccX, AccY).
-max_xykey([X+Y|Keys], AccX, AccY, MaxX, MaxY):-
-    XMax is max(X, AccX),
-    YMax is max(Y, AccY),
-    max_xykey(Keys, XMax, YMax, MaxX, MaxY).
-
-matrix_limits(Matrix, XMAX, YMAX):-
-    assoc_to_keys(Matrix,XYList),
-    max_xykey(XYList, 0, 0, XMAX, YMAX).
-
-matrix_element_transform(Op, Matrix, NewMatrix):-
-    assoc_to_list(Matrix, MatrixList),
-    maplist(Op, MatrixList, OpList),
-    ord_list_to_assoc(OpList, NewMatrix).
-
-matrix_element_add_(Addend, X+Y-Value, X+Y-NewValue):-
-    NewValue is Value + Addend.
-
-matrix_element_add(Value, Matrix, NewMatrix):-
-    matrix_element_transform(matrix_element_add_(Value), Matrix, NewMatrix).
-
-matrix_transform(Matrix, X, Y, Value, NewMatrix):-
-    put_assoc(X+Y, Matrix, Value, NewMatrix).
-
-matrix_xy_transform_(Op, Matrix, X, Y, NewMatrix):-
-    matrix(Matrix, X, Y, Value),
-    call(Op, Value, NewValue),
-    matrix_transform(Matrix, X, Y, NewValue, NewMatrix).
-
-matrix_xy_add(Matrix, X, Y, Addend, NewMatrix):-
-    matrix_xy_transform_(plus(Addend), Matrix, X, Y, NewMatrix).
 
 path_least_cost(L, Cost):-
     cost(L, PreviousCost),
