@@ -175,12 +175,11 @@ astar_update_neighbor(Goal,CostMatrix, CurrentCost, Neighbor,
 astar_update_neighbor(_, _, Neighbor, In, In):-
     writeln(["no neighborupdate", Neighbor]).
 
-astar_(0, _, 0).
-astar_(Steps, astate(CostMatrix, Open, KnownCosts, Goal, GuessCosts), Cost):-
+astar_step(astate(CostMatrix, Open, KnownCosts, Goal, GuessCosts), Next, Cost):-
+    statistics(global_stack, Stats),
+    writeln(Stats),
 %    assoc_to_list(KnownCosts, KnownCostList),
 %    writeln(["0astart", KnownCostList, Open]),
-    NewSteps is Steps - 1,
-    writeln(NewSteps),
 %    writeln("1best guess"),
     astar_best_guess(GuessCosts, Open, NewOpen, NewGuessCosts, Current),
 %    writeln("1.5best guess"),
@@ -195,17 +194,31 @@ astar_(Steps, astate(CostMatrix, Open, KnownCosts, Goal, GuessCosts), Cost):-
 	       nstate(NewGuessCosts, KnownCosts, NewOpen),
 	       nstate(NewNewGuessCosts, NewKnownCosts, NewNewOpen)),
 %	 writeln("4recurse"),
-	 astar_(NewSteps, astate(CostMatrix, NewNewOpen, NewKnownCosts, Goal, NewNewGuessCosts), Cost)
+	 Next = astate(CostMatrix, NewNewOpen, NewKnownCosts, Goal, NewNewGuessCosts)
     ;
 %         writeln("5failendpath"),
 %	 writeln(KnownCosts),
 %	 writeln(GuessCosts),
-	 astar_known_cost(KnownCosts, Goal, Cost)
+         astar_known_cost(KnownCosts, Goal, Cost),
+         Next = astate(done)
     ).
 %astar_(_, astar(_, Open, KnownCosts, Goal, GuessCosts), Cost):-
 %    astar_best_guess(GuessCosts, Open, _, Current, _),
 %    Current = Goal,
 %    astar_known_cost(KnownCosts, Goal, Cost).
+
+astar_(0, _, _).
+astar_(Steps, State, Cost):-
+%    astate(_, Open, _, _, _) = State,
+%    writeln(Open),
+    NextSteps is 1000,
+    astar_step(State, NewState, Cost),
+    !,
+    (NewState \= astate(done) ->
+	 astar_(NextSteps, NewState, Cost)
+    ;
+        writeln(["DONE"])
+    ).
 
 astar_goal(CostMatrix, GoalX+GoalY):-
     matrix_limits(CostMatrix, GoalX, GoalY).
@@ -225,7 +238,7 @@ astar(CostMatrix, Cost):-
     astar_goal(CostMatrix,Goal),
     astar_bootstrap(Start, Goal, KnownCosts, GuessCosts),
 
-    astar_(40000, astate(CostMatrix, [Start], KnownCosts, Goal, GuessCosts), Cost).
+    astar_(80000, astate(CostMatrix, [Start], KnownCosts, Goal, GuessCosts), Cost).
 
 day15_p1_fast(File, Score):-
     phrase_from_file(matrixp(LCostMatrix), File),
@@ -294,7 +307,7 @@ day15_p1_test2(Score):-
     day15_p1_fast("data/day15_p1_test2", Score).
 
 day15:-
-    day15_p1_test(17),
-    day15_p1(720),
-    day15_p2_test,
-    day15_p2.
+    day15_p1_test(40),
+    day15_p1(613),
+    day15_p2_test(315),
+    day15_p2(2899).
