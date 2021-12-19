@@ -14,8 +14,8 @@ packets([P]) --> packet(P).
 packets([P|Ps]) --> packet(P), packets(Ps).
 
 zeros([]).
-zeros([Z]) --> bdigit(Z).
-zeros([Z|Zs]) --> bdigit(Z), zeros(Zs).
+zeros([0]) --> bdigit(0).
+zeros([0|Zs]) --> bdigit(0), zeros(Zs).
 
 packet(P) --> literal_value(P).
 packet(O) --> operator(O).
