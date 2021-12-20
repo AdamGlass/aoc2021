@@ -31,14 +31,12 @@ explode([_+5], Acc, Out):-
 
 explode([L+LD,A+5,B+5,R+RD|Es], Acc, Out):-
     LD \= 5,
-    RD \= 5,
     !,
     NewR is R+B,
     NewL is L+A,
     exploded(Es, [NewR+RD,0+4,NewL+LD|Acc], Out).
 
 explode([_+5,B+5,R+RD|Es], Acc, Out):-
-    RD \= 5,
     !,
     NewR is R+B,
     exploded(Es, [NewR+RD,0+4|Acc], Out).
@@ -101,13 +99,10 @@ big_number(C):-
 	      A < 10).
 
 reduce(A, B):-
-    writeln([reduce, A]),
     ( excessive_depth(A) ->
-      writeln("exploding"),
       explode(A, [], NewA),
       reduce(NewA, B)
     ; big_number(A) ->
-      writeln("splitting"),
       splits(A, [], NewA),
       reduce(NewA, B)
     ;
