@@ -73,7 +73,7 @@ splits([], Acc, Out):-
 splits([A+D|As], Acc, Out):-
     A < 10,
     splits(As, [A+D|Acc], Out).
-    
+
 splits([A+AD|As], Acc, Out):-
     A >= 10,
     NewDepth is AD+1,
@@ -123,6 +123,30 @@ sums(A, InState, OutState):-
     adds(InState, A, R),
     reduce(R, OutState).
 
+magnitude_simplify([], _, Out, Out).
+magnitude_simplify([A+Depth,B+Depth|Ns], Depth, Acc, Out):-
+    !,
+    reverse(Acc, RAcc),
+    Mag is A*3+B*2,
+    NewDepth is Depth - 1,
+    append(RAcc, [Mag+NewDepth|Ns], Out).
+
+magnitude_simplify([A|As], Depth, Acc, Out):-
+    magnitude_simplify(As, Depth, [A|Acc], Out).
+
+magnitude([A+1], A).
+magnitude(N, Magnitude):-
+    (length(N, 1) ->
+         N = [Magnitude+_]
+    ;
+         findall(D+A,
+                 member(A+D, N),
+                 DepthList),
+         max_member(Depth+_, DepthList),
+         magnitude_simplify(N, Depth, [], NewN),
+         magnitude(NewN, Magnitude)
+    ).
+
 day18_verify(File, P):-
     phrase_from_file(spairs(Inputs), File),
     string_concat(File, "_answers", AnswerFile),
@@ -149,7 +173,25 @@ day18_sum_verify(File):-
 	 writeln([passed, NewOutput, ProposedOutput])
     ;
 	 writeln([failed, NewOutput, ProposedOutput])
-    ).         
+    ).
+
+day18_p1(File, Magnitude):-
+    phrase_from_file(spairs(Inputs), File),
+    maplist(squish, Inputs, [N|Ns]),
+    foldl(sums, Ns, N, Output),
+    magnitude(Output, Magnitude).
+
+day18_p2(File, MaxMagnitude):-
+    phrase_from_file(spairs(Inputs), File),
+    maplist(squish, Inputs, Numbers),
+    findall(Magnitude,
+            (member(A, Numbers),
+             member(B, Numbers),
+             A \= B,
+             sums(A, B, Sum),
+             magnitude(Sum, Magnitude)),
+            MagnitudeList),
+    max_list(MagnitudeList, MaxMagnitude).
 
 day18_parse_test:-
     phrase_from_file(spairs(T), "data/day18_explode_answers"),
@@ -180,7 +222,7 @@ day18_p2_test(Score):-
     day18_p2("data/day18_p1_test", Score).
 
 day18:-
-    day18_p1_test(45),
-    day18_p1(17766),
-    day18_p2_test(112),
-    day18_p2(1733).
+    day18_p1_test(4140),
+    day18_p1(2541),
+    day18_p2_test(3993),
+    day18_p2(4647).
