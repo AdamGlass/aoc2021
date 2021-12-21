@@ -4,11 +4,7 @@
 :- use_module(library(assoc)).
 :- use_module(library(lists)).
 
-tp --> bit1, bit1, bit1.
-
-bit1 --> [1].
-
-stream([P]) --> packet(P), zeros(_).
+stream([P]) --> packet(P).
 
 packets([P]) --> packet(P).
 packets([P|Ps]) --> packet(P), packets(Ps).
@@ -24,14 +20,14 @@ literal_value(L) --> packet_header(V, 4), pnumber(N, Count),
 		     {Bits is 6 + Count*5,
 		      L = literal(V, 4, Bits, N)}.
 
-operator(O) --> operator_header(V,T), short_id_type, 
-		number11(N), packets_count(N, P, PBits),
+operator(O) --> operator_header(V,T), short_id_type,
+		number11(N), packets_count(N, [], P, PBits),
 		{Bits is 7 + 11 + PBits,
 		 O = op(V,T,Bits, P)
 		}.
 
 operator(O) --> operator_header(V,T), long_id_type,
-		number15(PBits), packets_bits(PBits, P),
+		number15(PBits), packets_bitcount(PBits, [], P),
 		{Bits is 7 + 15 + PBits,
 		 O = op(V,T,Bits, P)
 		}.
@@ -43,11 +39,16 @@ long_id_type --> bdigit(0).
 
 packet_header(V, I) --> version(V), id(I).
 
-packets_count(Count, P, PBits) --> 
-    packets(P),
-    {length(P, Count), packets_bits_length(P, PBits)}.
-packets_bits(PBits, P) --> packets(P),
-   { packets_bits_length(P, PBits)}.
+packets_count(0, Acc, P, PBits) --> {reverse(Acc, P), packets_bits_length(P, PBits)}.
+packets_count(Count, Acc, P, PBits) -->
+    packet(R), {NewCount is Count - 1}, packets_count(NewCount, [R|Acc], P, PBits).
+
+packets_bitcount(0, Acc, P) --> {reverse(Acc, P)}.
+packets_bitcount(PBits, Acc, P) -->
+    packet(R),
+    { packet_bits(R, Bits),
+      NewBits is PBits - Bits},
+    packets_bitcount(NewBits, [R|Acc], P).
 
 version(V) --> bdigit(A), bdigit(B), bdigit(C), {binary_decimal([A,B,C], V)}.
 id(V) --> bdigit(A), bdigit(B), bdigit(C),{binary_decimal([A,B,C], V)}.
