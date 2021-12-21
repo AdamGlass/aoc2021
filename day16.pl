@@ -177,27 +177,69 @@ version_sum_([P|Ps], Acc, Sum):-
 version_sum(Packets, Sum):-
     version_sum_(Packets, 0, Sum).
 
+times(In, State, Out):-
+    Out is State * In.
+
+packet_eval(literal(_, _, _, N), N).
+
+% sum
+packet_eval(op(_, 0, _, P), Value):-
+    maplist(packet_eval, P, Addends),
+    sum_list(Addends, Value).
+
+% product
+packet_eval(op(_, 1, _, P), Value):-
+    maplist(packet_eval, P, Multipliers),
+    foldl(times, Multipliers, 1, Value).
+
+% min
+packet_eval(op(_, 2, _, P), Value):-
+    maplist(packet_eval, P, Mins),
+    min_list(Mins, Value).
+% max
+packet_eval(op(_, 3, _, P), Value):-
+    maplist(packet_eval, P, Mins),
+    max_list(Mins, Value).
+% >
+packet_eval(op(_, 5, _, [A,B]), Value):-
+    packet_eval(A, AValue),
+    packet_eval(B, BValue),
+    ( AValue > BValue ->
+      Value = 1
+    ;
+      Value = 0
+    ).
+
+% <
+packet_eval(op(_, 6, _, [A,B]), Value):-
+    packet_eval(A, AValue),
+    packet_eval(B, BValue),
+    ( AValue < BValue ->
+      Value = 1
+    ;
+      Value = 0
+    ).
+% =
+packet_eval(op(_, 7, _, [A,B]), Value):-
+    packet_eval(A, AValue),
+    packet_eval(B, BValue),
+    ( AValue = BValue ->
+      Value = 1
+    ;
+      Value = 0
+    ).
+
 day16_p1(File, Score):-
     phrase_from_file(hexline(HexNumber), File),
     hex_binary(HexNumber, Binary),
     phrase(stream(X), Binary, _),
     version_sum(X, Score).
 
-day16_parse_test_literal:-
-    hex_binary([13,2,15,14,2,8], LitBinary),
-    phrase(stream(X), LitBinary, Rest),
-    writeln([LitBinary, X, Rest]).
-
-day16_parse_test_op2:-
-    hex_binary([14,14,0,0,13,4,0,12,8,2,3,0,6,0], OpBinary2),
-    phrase(stream(Y), OpBinary2, Rest2),
-    writeln([OpBinary2, Y, Rest2]).
-
-day16_parse_test_op1:-
-    hex_binary([3,8,0,0,6,15,4,5,2,9,1,2,0,0], OpBinary),
-    writeln(OpBinary),
-    phrase(stream(X), OpBinary, Rest),
-    writeln([OpBinary, X, Rest]).
+day16_p2(File, Score):-
+    phrase_from_file(hexline(HexNumber), File),
+    hex_binary(HexNumber, Binary),
+    phrase(stream([X]), Binary, _),
+    packet_eval(X, Score).
 
 day16_p1(Score):-
     day16_p1("data/day16_p1_data", Score).
@@ -216,6 +258,21 @@ day16_p1_test:-
             ScoreList),
     ScoreList = [_,_,_,_-16,_-12, _-23,_-31].
 
+day16_p2_test:-
+    Tests = ["data/day16_p2_test1",
+	     "data/day16_p2_test2",
+	     "data/day16_p2_test3",
+	     "data/day16_p2_test4",
+	     "data/day16_p2_test5",
+	     "data/day16_p2_test6",
+	     "data/day16_p2_test7",
+	     "data/day16_p2_test8"],
+    findall(T-Score,
+            (member(T, Tests),
+	     day16_p2(T, Score)),
+            ScoreList),
+    ScoreList = [_-3,_-54,_-9, _-1, _-0, _-0,_-1, _-7].
+
 day16_p2(Score):-
     day16_p2("data/day16_p1_data", Score).
 
@@ -225,4 +282,5 @@ day16_p2_test(Score):-
 day16:-
     day16_p1_test,
     day16_p1(971),
-    day16_p2(_).
+    day16_p2_test,
+    day16_p2(831996589851).
