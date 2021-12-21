@@ -180,10 +180,8 @@ version_sum(Packets, Sum):-
 day16_p1(File, Score):-
     phrase_from_file(hexline(HexNumber), File),
     hex_binary(HexNumber, Binary),
-    writeln([HexNumber, Binary]),
-    phrase(stream(X), Binary, Rest),
-    version_sum(X, Score),
-    writeln([result, X, Score, File, Rest]).
+    phrase(stream(X), Binary, _),
+    version_sum(X, Score).
 
 day16_parse_test_literal:-
     hex_binary([13,2,15,14,2,8], LitBinary),
@@ -204,7 +202,7 @@ day16_parse_test_op1:-
 day16_p1(Score):-
     day16_p1("data/day16_p1_data", Score).
 
-day16_p1_test(Score):-
+day16_p1_test:-
     Tests = ["data/day16_p1_test1",
 	     "data/day16_p1_test2",
 	     "data/day16_p1_test3",
@@ -212,8 +210,11 @@ day16_p1_test(Score):-
 	     "data/day16_p1_test5",
 	     "data/day16_p1_test6",
 	     "data/day16_p1_test7"],
-    forall(member(T, Tests),
-	   day16_p1(T, _)).
+    findall(T-Score,
+            (member(T, Tests),
+	     day16_p1(T, Score)),
+            ScoreList),
+    ScoreList = [_,_,_,_-16,_-12, _-23,_-31].
 
 day16_p2(Score):-
     day16_p2("data/day16_p1_data", Score).
@@ -222,7 +223,6 @@ day16_p2_test(Score):-
     day16_p2("data/day16_p1_test", Score).
 
 day16:-
-    day16_p1_test(_),
-    day16_p1(_),
-    day16_p2_test(_),
+    day16_p1_test,
+    day16_p1(971),
     day16_p2(_).
