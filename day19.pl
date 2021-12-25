@@ -1,5 +1,4 @@
 :- use_module(library(dcg/basics)).
-:- use_module(library(tabling)).
 :- use_module(library(clpfd)).
 :- use_module(library(assoc)).
 :- use_module(library(lists)).
@@ -8,7 +7,13 @@
 scanners([S]) --> scanner(S).
 scanners([S|Ss]) --> scanner(S), blanks, scanners(Ss).
 
-scanner(S) --> scanner_header(H), beacons(D), { S = scanner(H, D)}.
+scanner(S) --> scanner_header(H), beacons(D), 
+	       { (H = 0 ->
+		      S = scanner(H, D, 0+0+0)
+		 ;
+		      S = scanner(H, D, X+Y+Z)
+		 )
+	       }.
  
 scanner_header(S) --> scanner_prefix, integer(S), scanner_postfix, blanks.
 
@@ -20,44 +25,39 @@ comma --> [C], {char_code(',', C)}.
 
 scanner_prefix --> `--- scanner `.
 scanner_postfix --> ` ---`.
-foo(1).
 
-orientation_gen(location(A,B,C), location(O1, O2, O3)):-
-    permute([A,B,C], [O1, O2, O3]).
+pairwise_distances(scanner(_,Beacons, _), PairWiseDistances):-
+    findall(PairWiseDistance,
+	   (member(R, Beacons),
+	    member(N, Beacons),
+	    R \= N,
+	    R = beacon(RX, RY, RZ),
+	    N = beacon(NX, NY, NZ),
+	    PairWiseDistance is abs(RX-NX) + abs(RY-NY) + abs(RZ-NZ)),
+	   Distances),
+    sort(Distances, PairWiseDistances).
 
-transform_gen(location(BX, BY, BZ), location(OBX, OBY, OBZ):-
-    orientation(location(BX, BY, BZ, location(OBX, OBY, OBZ))),
-    permutation_gen(A, B, C
-    length(L, Beacons),
+count_vals(X-L, Count):-
+    sum_list(L, Count).
 
-
-overlapping_beacons(beacon(A,AB), beacon(B, BB), Beacons):-
-    location(AX, AY, AZ),
-    location(BX, BY, BZ),
-    [AX, AY, AZ, BX, BY, BZ] ins inf..sup,
-    AX = AY = AZ = 0,
-    member(beacon(RX, RY, RZ),
-	   AB),
-
-    location(BX, BY, BZ),
-    
-
-    member(Beacon, AB),
-    member(
-    
-
-overlap_beacons(Scanners):-
-    forall((member(A, Scanners),
-	    A \= B,
-	    member(B, Scanners)),
-	   ovelapping_beacons(A, B, Beacons)).
-
-beacon_count(Scanners, BeaconCount):-
-    overlap_beacons(Scanners).
+scanner_merge(Scanner, Scanners):-
+    pairwise_distances(Scanner, Scanner0Distances),
+    writeln(Scanner0Distances),
+    maplist(pairwise_distances, Scanners, BeaconDistances),
+    findall(N-Commonalities,
+	    (nth0(N, BeaconDistances, Distances),
+	     member(Scanner0, Scanner0Distances),
+	     member(Scanner0, Distances),
+	     Commonalities = 1),
+	    Commons),
+    group_pairs_by_key(Commons, GroupedCommons),
+    maplist(count_vals, GroupedCommons, CountedGroupCommons),
+    writeln(CountedGroupCommons).
 
 day19_p1(File, Score):-
     phrase_from_file(scanners(Scanners), File),
-    beacon_count(Scanners, BeaconCount).
+    [S|Ss] = Scanners,
+    scanner_merge(S, Ss).
 
 day19_parse:-
     phrase_from_file(scanners(B), "data/day19_parse"),
