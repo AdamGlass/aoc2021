@@ -42,7 +42,7 @@ astar_update_neighbor(Goal, CostP, HeuristicP, CurrentCost, Neighbor,
               NewOpen = Open
 	 )
     ;
-	 nstate(GuessCosts, KnownCosts, Open) = 
+	 nstate(GuessCosts, KnownCosts, Open) =
 	 nstate(NewGuessCosts, NewKnownCosts, NewOpen)
     ).
 
@@ -69,7 +69,7 @@ astar_(StaticState, State, LeastCost):-
     !,
     ( NewState = astate(done, Cost) ->
       LeastCost = Cost
-    ; 
+    ;
       astar_( StaticState, NewState, LeastCost)
     ).
 
