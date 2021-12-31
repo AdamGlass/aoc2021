@@ -10,7 +10,10 @@
 data(p1data, [o, o, o, o, o, o, o, o, o, o, o], [[b,b], [a,c], [a,d], [d,c]]).
 data(p1test, [o, o, o, o, o, o, o, o, o, o, o], [[b,a], [c,d], [b,c], [d,a]]).
 data(p1test2,[a, o, o, o, o, o, o, o, o, o, o], [[o,a], [c,d], [b,c], [d,a]]).
+data(p2test, [o, o, o, o, o, o, o, o, o, o, o], [[b,d,d,a], [c,c,b,d], [b,b,a,c], [d,a,c,a]]).
+data(p2data, [o, o, o, o, o, o, o, o, o, o, o], [[b,d,d,b], [a,c,b,c], [a,b,a,d], [d,a,c,c]]).
 data(goal,   [o, o, o, o, o, o, o, o, o, o, o], [[a,a], [b,b], [c,c], [d,d]]).
+data(goal2,  [o, o, o, o, o, o, o, o, o, o, o], [[a,a,a,a], [b,b,b,b], [c,c,c,c], [d,d,d,d]]).
 
 move_cost(a, 1).
 move_cost(b, 10).
@@ -26,9 +29,16 @@ set_hallway(Hallway, X, InMatrix, OutMatrix):-
     nth0(X, Hallway, Value),
     matrix_transform(InMatrix, X, 0, Value, OutMatrix).
 
+
 set_sideroom([A,B], Index, InMatrix, OutMatrix):-
     matrix_transform(InMatrix, Index, 1, A, AMatrix),
     matrix_transform(AMatrix, Index, 2, B, OutMatrix).
+
+set_sideroom([A,B,C,D], Index, InMatrix, OutMatrix):-
+    matrix_transform(InMatrix, Index, 1, A, AMatrix),
+    matrix_transform(AMatrix, Index, 2, B, BMatrix),
+    matrix_transform(BMatrix, Index, 3, C, CMatrix),
+    matrix_transform(CMatrix, Index, 4, D, OutMatrix).
 
 room_init(Hallway, SideRooms, Matrix):-
     matrix_init(InitMatrix),
@@ -59,7 +69,6 @@ empty_to_target_row(Matrix, Column, Start, Target):-
 	   matrix(Matrix, Column, Row, o)).
 
 destinations_states_costs(Matrix, X+Y, Amphipod, Destinations, DestinationStatesCost):-
-    writeln([X+Y, Amphipod, Destinations]),
     move_cost(Amphipod, CostFactor),
     findall(DestinationState-Cost,
 	    (member(DX+DY, Destinations),
@@ -79,10 +88,22 @@ friendly_target_column(Matrix, Amphipod, YMax, Column):-
 	   ;
 	   matrix(Matrix, Column, Row, Amphipod)
 	   )).
-	   
+
+max_depth(X+Y, AX+AY, NX+NY):-
+    (Y > AY ->
+	NX = X,
+	NY = Y
+    ;
+        NX = AX,
+	NY = AY
+    ).
+
+max_depth_destinations(Destinations, MaxDepthDestinations):-
+    foldl(max_depth, Destinations, 0+0, MaxDepth),
+    MaxDepthDestinations = [MaxDepth].
+
 movex(Matrix, X+0, Amphipod, DestinationStatesCost):-
     matrix_limits(Matrix, _, YMax),
-    writeln("target"),
     target_column(Amphipod, TargetColumn),
     empty_to_target_column(Matrix, X, TargetColumn),
     friendly_target_column(Matrix, Amphipod, YMax, TargetColumn),
@@ -91,26 +112,39 @@ movex(Matrix, X+0, Amphipod, DestinationStatesCost):-
 	     forall(between_nc(0, Row, TRow),
 		    matrix(Matrix, TargetColumn, TRow, o)),
 	     Destination = TargetColumn+Row),
-	     Destinations),
+	    Destinations),
     trim_destinations(Destinations, CleanDestinations),
-    writeln([target, CleanDestinations]),
-    destinations_states_costs(Matrix, X+0, Amphipod, CleanDestinations, DestinationStatesCost).
+    max_depth_destinations(CleanDestinations, DeepestDestinations),
+    destinations_states_costs(Matrix, X+0, Amphipod, DeepestDestinations, DestinationStatesCost).
+
+unfriendly_column(_, Column+_, Amphipod):-
+    target_column(Amphipod, TargetColumn),
+    TargetColumn \= Column.
+
+unfriendly_column(Matrix, Column+_, Amphipod):-
+    matrix_limits(Matrix, _, YMax),
+    \+ forall(between(0, YMax, Y),
+	      (
+		  matrix(Matrix, Column, Y, o)
+	      ;
+	          matrix(Matrix, Column, Y, Amphipod)
+	      )
+	     ).
 
 move(Matrix,X+Y, Amphipod, DestinationStatesCost):-
     Y > 0,
+    unfriendly_column(Matrix, X+Y, Amphipod),
     empty_to_target_row(Matrix, X, Y, 0),
     findall(Destination,
 	    (between_nc(X, 0, DX),
 	     empty_to_target_column(Matrix, X, DX),
 	     Destination = DX+0),
 	    LeftDestinations),
-    writeln([X+Y, LeftDestinations]),
     findall(Destination,
 	    (between_nc(X, 10, DX),
 	     empty_to_target_column(Matrix, X, DX),
 	     Destination = DX+0),
 	    RightDestinations),
-    writeln([X+Y, RightDestinations]),
     append(LeftDestinations, RightDestinations, Destinations),
     trim_destinations(Destinations, CleanDestinations),
     destinations_states_costs(Matrix, X+Y, Amphipod, CleanDestinations, DestinationStatesCost).
@@ -123,10 +157,22 @@ neighbor_states(Matrix, AllNeighborStatesCost):-
 	   (matrix_xy(Matrix, X, Y),
 	    matrix(Matrix, X, Y, Amphipod),
 	    member(Amphipod, [a,b,c,d]),
-	    writeln(X+Y),
 	    move(Matrix, X+Y, Amphipod, NeighborStatesCost)),
 	   NeighborStatesCostList),
     flatten(NeighborStatesCostList, AllNeighborStatesCost).
+
+bad_heuristic(_, _, 1).
+heuristic(Matrix, _, Cost):-
+    findall(Cost,
+	   (matrix_xy(Matrix, X, Y),
+	    matrix(Matrix, X, Y, Amphipod),
+	    member(Amphipod, [a,b,c,d]),
+	    target_column(Amphipod, Column),
+	    distance(X+Y, Column+1, Distance),
+	    move_cost(Amphipod, AmphipodCost),
+	    Cost is Distance * AmphipodCost),
+	   CostList),
+    sum_list(CostList, Cost).
 
 board_write_side(Matrix, Y, X):-
     matrix(Matrix, X, Y, Value),
@@ -148,46 +194,39 @@ board_write_cost(State-Cost):-
     writeln([cost, Cost]),
     board_write(State).
 
-neighbor_next(Neighbor-Cost):-
-    writeln("start"),
-    board_write_cost(Neighbor-Cost),
-    writeln("neighbors"),
-    neighbor_states(Neighbor, NewNeighbors),
-    maplist(board_write_cost, NewNeighbors).
-
-sample_list(List, Count, Samples):-
-    length(Samples, Count),
-    random_permutation(List, RandomPermutation),
-    append(Samples, _, RandomPermutation).
-
 room(File, Matrix):-
     data(File, Hallway, SideRooms),
     room_init(Hallway, SideRooms, Matrix).
 
 goal(GoalMatrix):-
     room(goal, GoalMatrix).
-    
+
+goal2(GoalMatrix):-
+    room(goal2, GoalMatrix).
+
 day23_p1(File, Score):-
     writeln("Goal"),
     goal(GoalMatrix),
     board_write(GoalMatrix),
     room(File, Matrix),
     board_write(Matrix),
-    writeln("Neighbors"),
-    neighbor_states(Matrix, Neighbors),
-    maplist(board_write_cost, Neighbors),
-    writeln("NeighBorNext"),
-    maplist(neighbor_next, Neighbors),
-    sample_list(Neighbors, 10, NeighborSubset),
-    maplist(neighbor_next, NeighborSubset).
+    astar(Matrix,
+	  GoalMatrix,
+	  neighbor_states,
+	  bad_heuristic,
+	  Score).
 
-%    astar(Mattrix,
-%	  GoalMatrix,
-%	  successor_states,
-%	  state_cost,
-%	  heuristic,
-%	  Score).
-%    writeln(SideRooms).
+day23_p2(File, Score):-
+    writeln("Goal"),
+    goal2(GoalMatrix),
+    board_write(GoalMatrix),
+    room(File, Matrix),
+    board_write(Matrix),
+    astar(Matrix,
+	  GoalMatrix,
+	  neighbor_states,
+	  heuristic,
+	  Score).
 
 day23_p1(Score):-
     day23_p1(p1data, Score).
@@ -199,13 +238,13 @@ day23_p1_test2(Score):-
     day23_p1(p1test2, Score).
 
 day23_p2(Score):-
-    day23_p2("data/day23_p1_data", Score).
+    day23_p2(p2data, Score).
 
 day23_p2_test(Score):-
-    day23_p2("data/day23_p1_test", Score).
+    day23_p2(p2test, Score).
 
 day23:-
-    day23_p1_test(58),
-    day23_p1(920580),
-    day23_p2_test(_),
-    day23_p2(_).
+    day23_p1_test(12521),
+    day23_p1(11417),
+    day23_p2_test(44169),
+    day23_p2(49529).
