@@ -1,4 +1,4 @@
-:- module(astar, [astar/6]).
+:- module(astar, [astar/5]).
 
 remove(R, List, NewList):-
     partition(=(R), List, _, NewList).
@@ -24,11 +24,10 @@ astar_best_guess(gstate(GuessCosts, Heap), Open, NewOpen, NewGuessCosts, Min):-
     Min = State,
     remove(Min, Open, NewOpen).
 
-astar_update_neighbor(Goal, CostP, HeuristicP, CurrentCost, Neighbor,
+astar_update_neighbor(Goal, HeuristicP, CurrentCost, Neighbor-NeighborCost,
 		      nstate(GuessCosts, KnownCosts, Open),
 		      nstate(NewGuessCosts, NewKnownCosts, NewOpen)):-
 
-    call(CostP, Neighbor, NeighborCost),
     TentativeCost is CurrentCost + NeighborCost,
     astar_known_cost(KnownCosts, Neighbor, KnownCost),
     (TentativeCost < KnownCost ->
@@ -49,13 +48,13 @@ astar_update_neighbor(Goal, CostP, HeuristicP, CurrentCost, Neighbor,
 astar_update_neighbor(_, _, Neighbor, In, In):-
     writeln(["no neighborupdate", Neighbor]).
 
-astar_step(sstate(Goal, NeighborP, CostP, HeuristicP), astate( Open, KnownCosts, GuessCosts), Next):-
+astar_step(sstate(Goal, NeighborP, HeuristicP), astate( Open, KnownCosts, GuessCosts), Next):-
     astar_best_guess(GuessCosts, Open, NewOpen, NewGuessCosts, Current),
     astar_known_cost(KnownCosts, Current, CurrentCost),
     (Current \= Goal ->
-	 call(NeighborP, Current, Neighbors),
-	 foldl(astar_update_neighbor(Goal, CostP, HeuristicP, CurrentCost),
-	       Neighbors,
+	 call(NeighborP, Current, NeighborsCosts),
+	 foldl(astar_update_neighbor(Goal, HeuristicP, CurrentCost),
+	       NeighborsCosts,
 	       nstate(NewGuessCosts, KnownCosts, NewOpen),
 	       nstate(NewNewGuessCosts, NewKnownCosts, NewNewOpen)),
 	 Next = astate(NewNewOpen, NewKnownCosts, NewNewGuessCosts)
@@ -83,8 +82,8 @@ astar_bootstrap(Start,Goal,Heuristic, KnownCosts, GuessCosts):-
     call(Heuristic, Start, Goal, HCost),
     astar_guess_cost(InitialGuess, Start, HCost, GuessCosts).
 
-astar(Start, Goal, Neighbors, Cost, Heuristic, LeastCost):-
+astar(Start, Goal, Neighbors, Heuristic, LeastCost):-
     astar_bootstrap(Start, Goal, Heuristic, KnownCosts, GuessCosts),
-    astar_(sstate(Goal, Neighbors, Cost, Heuristic),
+    astar_(sstate(Goal, Neighbors, Heuristic),
 	   astate([Start], KnownCosts, GuessCosts),
 	   LeastCost).

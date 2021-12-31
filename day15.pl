@@ -72,18 +72,19 @@ traversal_heuristic(X+Y, GX+GY, Guestimate):-
     DY is abs(GY-Y),
     Guestimate is (DX+DY).
 
-traversal_neighbors(CostMatrix, X+Y, NeighborsList):-
-    matrix_xy_adjacent_cardinal(CostMatrix, X, Y, NeighborsList).
+cost_traversal(CostMatrix, X+Y, R):-
+    matrix(CostMatrix, X, Y, Cost),
+    R = X+Y-Cost.
 
-traversal_cost(CostMatrix, X+Y, Cost):-
-    matrix(CostMatrix, X, Y, Cost).
+traversal_neighbors_cost(CostMatrix, X+Y, NeighborsCostList):-
+    matrix_xy_adjacent_cardinal(CostMatrix, X, Y, NeighborsList),
+    maplist(cost_traversal(CostMatrix), NeighborsList, NeighborsCostList).
 
 least_cost_traversal(CostMatrix, LeastCost):-
     matrix_limits(CostMatrix, GoalX, GoalY),
     astar(0+0,
 	  GoalX+GoalY,
-	  traversal_neighbors(CostMatrix),
-	  traversal_cost(CostMatrix),
+	  traversal_neighbors_cost(CostMatrix),
 	  traversal_heuristic,
 	  LeastCost).
 
