@@ -13,7 +13,7 @@ cubex(C) --> cube_opx(V), xequals, range(XMIN, XMAX), comma, yequals, range(YMIN
 range(MIN, MAX) --> integer(MIN), range_symbol, integer(MAX).
 
 cube_opx(1) --> `on `.
-cube_opx(0) --> `off `.
+cube_opx(-1) --> `off `.
 
 range_symbol --> `..`.
 comma --> [C], {char_code(',', C)}.
@@ -29,7 +29,11 @@ cube(Matrix, X+Y+Z, Value):-
     ).
 
 cube(Matrix, X+Y+Z, Value, NewMatrix):-
-    put_assoc(X+Y+Z, Matrix, Value, NewMatrix).
+    (Value = 1 ->
+	 put_assoc(X+Y+Z, Matrix, 1, NewMatrix)
+    ;
+	 put_assoc(X+Y+Z, Matrix, 0, NewMatrix)
+    ).
 
 cube_op_(Value, X+Y+Z, InMatrix, OutMatrix):-
     cube(InMatrix, X+Y+Z, Value, OutMatrix).
@@ -62,21 +66,88 @@ count_50(Matrix, Count):-
 	    Ons),
     length(Ons, Count).
 
-day22_p1(File, Score):-
+volume(cube(V, XMin+XMax, YMin+YMax, ZMin+ZMax), Volume):-
+    Volume is (XMax - XMin + 1) * (YMax - YMin + 1) * (ZMax - ZMin + 1) * V.
+
+xintersect(AMin+AMax, BMin+BMax):-
+    AMin =< BMax,
+    AMax >= BMin.
+
+intersect_cube(cube(_, AXMin+AXMax, AYMin+AYMax, AZMin+AZMax), cube(_, BXMin+BXMax, BYMin+BYMax, BZMin+BZMax)):-
+
+    xintersect(AXMin+AXMax, BXMin+BXMax),
+    xintersect(AYMin+AYMax, BYMin+BYMax),
+    xintersect(AZMin+AZMax, BZMin+BZMax).
+
+intersection_cube(cube(AV, AXMin+AXMax, AYMin+AYMax, AZMin+AZMax), cube(BV, BXMin+BXMax, BYMin+BYMax, BZMin+BZMax), Intersection):-
+
+    XMin is max(AXMin, BXMin),
+    YMin is max(AYMin, BYMin),
+    ZMin is max(AZMin, BZMin),
+
+    XMax is min(AXMax, BXMax),
+    YMax is min(AYMax, BYMax),
+    ZMax is min(AZMax, BZMax),
+
+    % N.B. remembering that an on cube will be added anyway
+    %      so this has to account for the effect of the intersection
+
+    ([AV, BV] = [1, -1] -> % cancel existing
+	 V = 1
+    ; [AV,BV] = [1, 1] ->  % cancel double count
+         V = -1
+    ; [AV,BV] = [-1, 1] -> % just subtract
+         V = -1
+    ; % implied [-1, -1]  avoid double count
+         V = 1
+    ),
+    Intersection = cube(V, XMin+XMax, YMin+YMax, ZMin+ZMax).
+
+on_cube(cube(1, _, _, _)).
+sum_volume(Cube, InValue, OutValue):-
+    volume(Cube, Volume),
+    OutValue is InValue + Volume.
+
+cube_count_([], AccCubes, Count):-
+    foldl(sum_volume, AccCubes, 0, Count).
+cube_count_([C|Cs], AccCubes, Count):-
+    findall(Intersection,
+	    (member(A, AccCubes),
+	     intersect_cube(C,A),
+	     intersection_cube(C, A, Intersection)),
+	    Intersections),
+    length(Intersections, ICount),
+    writeln([intersection, ICount]),
+    append(Intersections, AccCubes, NewAccCubes),
+    (on_cube(C) ->
+	 cube_count_(Cs, [C|NewAccCubes], Count)
+    ;
+         cube_count_(Cs, NewAccCubes, Count)
+    ).
+
+cube_count(Cubes, Count):-
+    cube_count_(Cubes, [], Count).
+
+day22_p1_simple(File, Score):-
     phrase_from_file(data(Cubes), File),
     include(min_range, Cubes, LCubes),
     cube_init(LCubes, OutMatrix),
     count_50(OutMatrix, Score).
 
+day22_p1_fast(File, Score):-
+    phrase_from_file(data(Cubes), File),
+    include(min_range, Cubes, LCubes),
+    cube_count(LCubes, Score).
+
 day22_p2(File, Score):-
-    phrase_from_file(data(Players), File),
-    play_p2(Players, Score).
+    phrase_from_file(data(Cubes), File),
+    cube_count(Cubes, Score).
 
 day22_p1(Score):-
-    day22_p1("data/day22_p1_data", Score).
+    day22_p1_simple("data/day22_p1_data", Score).
 
 day22_p1_test(Score):-
-    day22_p1("data/day22_p1_test", Score).
+    day22_p1_simple("data/day22_p1_test", Score).
 
 day22_p2(Score):-
     day22_p2("data/day22_p1_data", Score).
@@ -84,8 +155,14 @@ day22_p2(Score):-
 day22_p2_test(Score):-
     day22_p2("data/day22_p1_test", Score).
 
+day22_p1_fast(Score):-
+    day22_p1_fast("data/day22_p1_data", Score).
+
+day22_p1_test_fast(Score):-
+    day22_p1_fast("data/day22_p1_test", Score).
+
 day22:-
-    day22_p1_test(739785),
-    day22_p1(920580),
-    day22_p2_test(_),
-    day22_p2(_).
+    day22_p1_test(590784),
+    day22_p1(580810),
+    day22_p2_test(_), % produces wrong answer?
+    day22_p2(1265621119006734).
