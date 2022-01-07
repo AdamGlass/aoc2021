@@ -1,0 +1,6 @@
+Advent of Code 2021 in Prolog
+
+Done for fun.   My Prolog was quite rusty and it took a while to get into the specific mindset required.  On some days i was more succesful than others.
+
+The most interesting solution is likely the day 24 where i was able to use CLFPD (Constriant Logic Programming over Finite Domains) to convert the ALU instruction sequence into a set of constraints and then just asked the Prolog implementation to produce results that met the constraints.  This used Prolog mechanisms that were not available when I last touched Prolog.  Other solutions were more painful.  Overall a lot of fun.
+
